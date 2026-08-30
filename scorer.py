@@ -88,12 +88,14 @@ def score_event(
     # --- Action scoring: among diagnosis.candidate_actions, score each.
     action_cost_ref = scoring_config["action_score"]["action_cost_reference"]
     risk_ref = scoring_config["action_score"]["risk_reference"]
+    effectiveness_ref = scoring_config["action_score"]["action_effectiveness_reference"]
 
     action_scores = {}
     for action in diagnosis.candidate_actions:
         cost = action_cost_ref.get(action, 20)  # unknown action -> assume moderate cost
         risk = risk_ref.get(action, 20)
-        recovery_benefit_estimate = recovery_potential  # proxy, not a rupee prediction
+        effectiveness = effectiveness_ref.get(action, 0.5)  # unknown action -> assume middling effectiveness
+        recovery_benefit_estimate = recovery_potential * effectiveness  # proxy, not a rupee prediction
         net_score = round(recovery_benefit_estimate - cost - risk, 2)
         action_scores[action] = net_score
 

@@ -42,6 +42,17 @@
       "discount_10_percent": 30,
       "payment_plan_offer": 20,
       "escalate_human_review": 5
+    },
+    "action_effectiveness_reference": {
+      "_notes": "Multiplier on recovery_potential representing how much of the potential this action actually converts. no_action=0 by definition (taking no action recovers nothing). Others are authored relative judgments, e.g. a discount converts more potential than a bare reminder, at higher cost/risk (see above).",
+      "no_action": 0.0,
+      "reminder": 0.5,
+      "retry_after_delay": 0.7,
+      "payment_link": 0.75,
+      "alternate_method_prompt": 0.65,
+      "discount_10_percent": 0.9,
+      "payment_plan_offer": 0.8,
+      "escalate_human_review": 0.85
     }
   },
 
