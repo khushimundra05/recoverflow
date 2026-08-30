@@ -1,0 +1,54 @@
+{
+  "_notes": "Recovery Opportunity Score weights and Action Score formula. All sub-scores are normalized 0-100. This is a transparent configurable heuristic, explicitly NOT a calibrated probability or a trained model -- see README for rationale.",
+
+  "recovery_opportunity_score": {
+    "weights": {
+      "recovery_potential": 0.40,
+      "revenue_value": 0.25,
+      "customer_value": 0.20,
+      "confidence": 0.15
+    },
+    "recovery_potential_inputs": [
+      "razorpay_source (customer > gateway > bank, in terms of retry-worthiness)",
+      "prior_attempt_count (more prior failed attempts = lower potential)",
+      "time_since_event"
+    ],
+    "customer_value_inputs": [
+      "repeat_order_count",
+      "average_order_value",
+      "customer_tenure_days"
+    ]
+  },
+
+  "action_score": {
+    "formula": "recovery_benefit_estimate - action_cost - risk",
+    "_naming_note": "Deliberately named 'recovery_benefit_estimate', NOT 'expected recovery' or 'predicted rupee recovery' -- it is a normalized, configurable prior used to COMPARE interventions, not a calibrated probability.",
+    "action_cost_reference": {
+      "no_action": 0,
+      "reminder": 5,
+      "retry_after_delay": 5,
+      "payment_link": 10,
+      "alternate_method_prompt": 8,
+      "discount_10_percent": 40,
+      "payment_plan_offer": 15,
+      "escalate_human_review": 20
+    },
+    "risk_reference": {
+      "no_action": 0,
+      "reminder": 10,
+      "retry_after_delay": 10,
+      "payment_link": 15,
+      "alternate_method_prompt": 12,
+      "discount_10_percent": 30,
+      "payment_plan_offer": 20,
+      "escalate_human_review": 5
+    }
+  },
+
+  "budget_ranker": {
+    "sort_key": "recovery_opportunity_score * best_allowed_action_score",
+    "deferred_events_are_logged": true
+  },
+
+  "_production_roadmap_note": "v2 architecture: once (event, action, outcome) triples accumulate from real usage, recovery_potential and recovery_benefit_estimate can be replaced by a calibrated P(recovery | context, action) model with incremental-uplift estimation. v1 deliberately does not train this from synthetic labels -- see README 'Data Honesty' section."
+}

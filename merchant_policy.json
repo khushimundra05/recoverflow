@@ -1,0 +1,39 @@
+{
+  "_notes": "These are hard constraints, not scored factors. An action must pass ALL applicable checks here before it is even considered by the action scorer. Values are merchant-configurable defaults for the prototype.",
+
+  "contact_limits": {
+    "max_messages_per_customer_per_week": 2,
+    "customer_cooldown_hours": 24,
+    "max_recovery_attempts_per_event": 3
+  },
+
+  "financial_limits": {
+    "max_auto_discount_percent": 10,
+    "human_escalation_threshold_amount_inr": 25000
+  },
+
+  "capacity": {
+    "daily_recovery_budget_inr": 500000,
+    "daily_max_actions_executed": 200
+  },
+
+  "leak_type_specific": {
+    "invoice_overdue": {
+      "payment_plan_min_amount_inr": 20000,
+      "escalate_after_days_overdue": 30
+    },
+    "checkout_abandoned": {
+      "min_time_since_abandonment_minutes": 15,
+      "max_time_since_abandonment_hours": 72
+    }
+  },
+
+  "hard_blocks": [
+    "never_discount_above_max_auto_discount_percent",
+    "never_contact_within_cooldown_window",
+    "never_exceed_max_recovery_attempts",
+    "never_auto_execute_above_human_escalation_threshold_without_review"
+  ],
+
+  "_future_module_note": "RBI's e-mandate pre-debit notification framework (24hr pre-notification, AFA thresholds) is intentionally NOT included here in v1 -- it applies specifically to recurring/subscription mandate debits, which are out of scope for this prototype's three leak types (failed payment / abandonment / overdue invoice). Flagged as a future policy module for subscription-recovery scope."
+}

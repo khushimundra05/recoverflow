@@ -1,0 +1,77 @@
+{
+  "_notes": "Root-cause mapping derived from Razorpay's real payment error taxonomy (code/reason/source/step). Source: https://razorpay.com/docs/errors/payments/list/ and https://razorpay.com/docs/errors/. This is the diagnoser's lookup table -- extend it as you encounter more reason codes in test-mode.",
+
+  "insufficient_funds": {
+    "root_cause": "customer_side_temporary",
+    "source": "customer",
+    "confidence": 0.85,
+    "rationale": "Customer-side, often resolves if retried later or after a nudge.",
+    "candidate_actions": ["retry_after_delay", "payment_link", "alternate_method_prompt"]
+  },
+  "payment_cancelled": {
+    "root_cause": "customer_side_intent",
+    "source": "customer",
+    "confidence": 0.5,
+    "rationale": "Customer backed out mid-flow. Could be hesitation, distraction, or a real change of mind -- diagnosis is genuinely uncertain here.",
+    "candidate_actions": ["payment_link", "reminder", "no_action"]
+  },
+  "payment_timedout": {
+    "root_cause": "customer_side_incomplete",
+    "source": "customer",
+    "confidence": 0.6,
+    "rationale": "Customer exceeded the processing time limit (typically 10 min). Often a UX/attention issue, not a hard decline.",
+    "candidate_actions": ["retry_prompt", "payment_link"]
+  },
+  "bank_declined": {
+    "root_cause": "bank_side_decline",
+    "source": "bank",
+    "confidence": 0.4,
+    "rationale": "Bank declined without detailed reason exposed to Razorpay or merchant. Low diagnostic confidence by design.",
+    "candidate_actions": ["alternate_method_prompt", "payment_link"]
+  },
+  "fraud_suspected_by_bank": {
+    "root_cause": "bank_side_risk_flag",
+    "source": "bank",
+    "confidence": 0.3,
+    "rationale": "Customer's bank flagged as suspected fraud. Do not aggressively retry -- risk of repeated decline or account friction.",
+    "candidate_actions": ["alternate_method_prompt", "no_action", "escalate_human_review"]
+  },
+  "gateway_error": {
+    "root_cause": "infrastructure_side",
+    "source": "gateway",
+    "confidence": 0.75,
+    "rationale": "Downtime or issue on partner bank/gateway, not customer or merchant fault. Safe to retry after cooldown.",
+    "candidate_actions": ["retry_after_delay", "payment_link"]
+  },
+  "upi_provider_downtime": {
+    "root_cause": "infrastructure_side",
+    "source": "gateway",
+    "confidence": 0.75,
+    "rationale": "UPI provider-level downtime. Retrying immediately will likely fail again; wait for a cooldown window.",
+    "candidate_actions": ["retry_after_delay", "alternate_method_prompt"]
+  },
+  "authentication_failed": {
+    "root_cause": "customer_side_input_error",
+    "source": "customer",
+    "confidence": 0.7,
+    "rationale": "Wrong OTP/PIN entered. Simple retry with correct auth usually resolves this.",
+    "candidate_actions": ["retry_prompt", "payment_link"]
+  },
+
+  "_simulated_reasons_note": "The two entries below are NOT Razorpay reason codes -- they represent leak types with no equivalent real taxonomy (checkout abandonment, overdue invoice). Kept in this file for pipeline consistency but explicitly flagged as simulated so the diagnoser and any dashboard can label them differently from Razorpay-sourced diagnoses.",
+
+  "checkout_abandoned": {
+    "root_cause": "unknown_pre_purchase_dropoff",
+    "source": "simulated",
+    "confidence": 0.35,
+    "rationale": "True intent is unknowable from event data alone (price hesitation, comparison shopping, technical friction, genuine change of mind are all indistinguishable). Confidence deliberately capped low.",
+    "candidate_actions": ["reminder", "payment_link", "no_action"]
+  },
+  "invoice_overdue": {
+    "root_cause": "b2b_receivable_delay",
+    "source": "simulated",
+    "confidence": 0.4,
+    "rationale": "No public dataset for B2B payment-delay causes; using configurable priors per the project's data-honesty policy.",
+    "candidate_actions": ["reminder", "payment_plan_offer", "escalate_human_review", "no_action"]
+  }
+}
