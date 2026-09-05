@@ -17,10 +17,10 @@ import numpy as np
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-np.random.seed(42)  # reproducible for the hackathon demo
 
 
 def simulate_abandonment_events(customer_features_path: Path, n_events: int = 150) -> pd.DataFrame:
+    rng = np.random.default_rng(42)  # local, deterministic regardless of import order
     real_customers = pd.read_csv(customer_features_path)
 
     sampled = real_customers.sample(n=min(n_events, len(real_customers)), random_state=42).reset_index(drop=True)
@@ -34,9 +34,11 @@ def simulate_abandonment_events(customer_features_path: Path, n_events: int = 15
         "average_order_value_brl": sampled["average_order_value_brl"],  # native currency, rank-only use
         "customer_tenure_days": sampled["customer_tenure_days"],
         "customer_value_score": sampled["customer_value_score"],
+        "ml_customer_propensity_score": sampled["ml_customer_propensity_score"],
         # Synthetic fields below -- explicitly not derived from any real dataset
-        "cart_value_inr": np.round(np.random.lognormal(mean=7.5, sigma=1.0, size=len(sampled)), 2),
-        "time_since_abandonment_minutes": np.random.randint(15, 4320, size=len(sampled)),  # 15 min to 72 hrs
+        "amount_inr": np.round(rng.lognormal(mean=7.5, sigma=1.0, size=len(sampled)), 2),
+        "time_since_abandonment_minutes": rng.integers(15, 4320, size=len(sampled)),  # 15 min to 72 hrs
+        "prior_attempt_count": rng.choice([0, 0, 0, 1], size=len(sampled)),
         "is_simulated_event": True,
     })
 

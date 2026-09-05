@@ -17,7 +17,6 @@ import numpy as np
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-np.random.seed(7)
 
 # Roughly realistic relative frequencies -- authored, not measured (we have no
 # real failure-rate data by reason). insufficient_funds and payment_cancelled
@@ -36,6 +35,7 @@ REASON_WEIGHTS = {
 
 def simulate_payment_failure_events(customer_features_path: Path, n_events: int = 150,
                                      overlap_customer_ids: list = None) -> pd.DataFrame:
+    rng = np.random.default_rng(7)  # local, deterministic regardless of import order
     real_customers = pd.read_csv(customer_features_path)
 
     if overlap_customer_ids:
@@ -52,7 +52,7 @@ def simulate_payment_failure_events(customer_features_path: Path, n_events: int 
     else:
         sampled = real_customers.sample(n=n_events, random_state=7).reset_index(drop=True)
 
-    reason_keys = np.random.choice(
+    reason_keys = rng.choice(
         list(REASON_WEIGHTS.keys()), size=len(sampled), p=list(REASON_WEIGHTS.values())
     )
 
@@ -65,9 +65,10 @@ def simulate_payment_failure_events(customer_features_path: Path, n_events: int 
         "average_order_value_brl": sampled["average_order_value_brl"].values,
         "customer_tenure_days": sampled["customer_tenure_days"].values,
         "customer_value_score": sampled["customer_value_score"].values,
+        "ml_customer_propensity_score": sampled["ml_customer_propensity_score"].values,
         # SIMULATED -- no live merchant means no real transaction amount exists anywhere.
-        "amount_inr": np.round(np.random.lognormal(mean=8.2, sigma=1.1, size=len(sampled)), 2),
-        "prior_attempt_count": np.random.choice([0, 0, 0, 1, 1, 2], size=len(sampled)),
+        "amount_inr": np.round(rng.lognormal(mean=8.2, sigma=1.1, size=len(sampled)), 2),
+        "prior_attempt_count": rng.choice([0, 0, 0, 1, 1, 2], size=len(sampled)),
         "is_simulated_event": True,
         "reason_code_is_real_razorpay_vocab": True,
     })

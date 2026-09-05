@@ -74,9 +74,16 @@ def _save_ledger(ledger: dict):
         json.dump(ledger, f, indent=2)
 
 
-def make_action_id(event_id: str, customer_id: str, action_type: str, payload: dict) -> str:
+def make_action_id(event_id: str, customer_id: str, action_type: str, payload: dict,
+                    client_label: str) -> str:
     payload_str = json.dumps(payload, sort_keys=True)
-    raw = f"{event_id}|{customer_id}|{action_type}|{payload_str}"
+    # client_label is included so a mock execution and a real execution of the
+    # "same" logical event NEVER collide in the idempotency ledger -- without
+    # this, a real-mode run could silently short-circuit to a cached MOCK
+    # result and skip the actual Razorpay call entirely (a real bug caught
+    # by testing: an "order_MOCK..." reference appeared during a real-mode
+    # test run because the ledger didn't distinguish the two).
+    raw = f"{event_id}|{customer_id}|{action_type}|{payload_str}|{client_label}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -163,7 +170,7 @@ def execute_action(
 ) -> ExecutionResult:
     action_type = constraint_result.final_action
     payload = {"amount_inr": amount_inr, "action": action_type}
-    action_id = make_action_id(constraint_result.event_id, customer_id, action_type, payload)
+    action_id = make_action_id(constraint_result.event_id, customer_id, action_type, payload, client_label)
 
     ledger = _load_ledger()
 

@@ -15,6 +15,15 @@ REAL vs ASSUMED in this file:
     invoice_overdue.
   - customer_value_score: REAL, computed from actual Olist order history
     (see ingest_olist.py), used as a rank-based signal only.
+  - ml_customer_propensity_score: REAL, a genuine trained classifier's output
+    (see ml_risk_model.py) on real Olist order_status labels, held-out
+    precision/recall/AUC/PR-AUC reported there. IMPORTANT: this predicts
+    historical order-completion reliability for a CUSTOMER, not whether a
+    specific recovery action will succeed -- no dataset has that label. It
+    is blended into the CUSTOMER VALUE component alongside the rank-based
+    Olist signals (repeat orders, order value, tenure), not into
+    recovery_potential -- conflating "reliable customer historically" with
+    "this specific event is recoverable" would be a real labeling error.
   - recovery_potential, confidence: come from diagnoser.py -- real Razorpay
     source/reason for payment failures, capped/authored for simulated leaks.
   - action_cost / risk: authored reference values from scoring_config.json,
@@ -56,6 +65,9 @@ def score_event(
     revenue_value_is_real: bool,
     customer_value_score: float,    # 0-100, from ingest_olist.py (real, rank-based)
     prior_attempt_count: int = 0,
+    ml_customer_propensity_score: float = 61.4,  # REAL ML output (see ml_risk_model.py);
+    # default = population mean (100 - mean poor-completion rate), used only
+    # if a caller doesn't have a real per-customer score available.
     scoring_config: dict = None,
 ) -> ScoredEvent:
     if scoring_config is None:
@@ -63,11 +75,18 @@ def score_event(
 
     weights = scoring_config["recovery_opportunity_score"]["weights"]
 
-    # --- Recovery potential: derived from diagnosis confidence and prior attempts.
-    # More prior failed attempts on the SAME event lowers potential (diminishing
-    # returns on retrying something that keeps failing).
+    # --- Recovery potential: derived ONLY from diagnosis confidence and prior
+    # attempts. Deliberately does NOT include the ML customer-propensity
+    # signal -- that signal describes the CUSTOMER's historical reliability,
+    # not whether THIS event is recoverable, so it belongs in customer value.
     attempt_penalty = min(prior_attempt_count * 15, 60)
     recovery_potential = max(_confidence_to_100(diagnosis.confidence) - attempt_penalty, 0)
+
+    # --- Customer value: blends the real rank-based Olist signal (repeat
+    # orders, order value, tenure -- see ingest_olist.py) with the real
+    # ML-derived customer propensity signal. Both are REAL, both describe
+    # the CUSTOMER, not the specific event -- a legitimate blend.
+    blended_customer_value = round(0.6 * customer_value_score + 0.4 * ml_customer_propensity_score, 2)
 
     # --- Revenue value: normalize to 0-100 via a simple capped log-ish scale.
     # (For the hackathon batch, better to normalize against the batch's own
@@ -80,7 +99,7 @@ def score_event(
     recovery_opportunity_score = round(
         weights["recovery_potential"] * recovery_potential
         + weights["revenue_value"] * revenue_value_score
-        + weights["customer_value"] * customer_value_score
+        + weights["customer_value"] * blended_customer_value
         + weights["confidence"] * confidence_score,
         2,
     )
@@ -103,9 +122,10 @@ def score_event(
     best_action_score = action_scores[best_action]
 
     provenance = {
-        "recovery_potential": f"diagnosis.confidence ({'real Razorpay signal' if diagnosis.source != 'simulated' else 'simulated/authored'}) minus prior_attempt_count penalty (authored)",
+        "recovery_potential": f"diagnosis.confidence ({'real Razorpay signal' if diagnosis.source != 'simulated' else 'simulated/authored'}) minus prior_attempt_count penalty (authored). Does NOT include the ML signal -- see customer_value.",
         "revenue_value": "REAL amount" if revenue_value_is_real else "SIMULATED amount (see event source)",
-        "customer_value_score": "REAL -- computed from actual Olist order history",
+        "customer_value_score": "REAL -- blend of Olist rank-based signal (60%) and ML customer propensity score (40%), both describing the CUSTOMER's real historical behavior, not this specific event",
+        "ml_customer_propensity_score": "REAL -- trained RandomForest classifier on real Olist order_status labels, predicts historical order-completion reliability (NOT recovery-action outcome). See ml_risk_model.py for held-out precision/recall/AUC/PR-AUC",
         "confidence": f"{'REAL Razorpay-derived' if diagnosis.source != 'simulated' else 'authored/capped'} diagnostic confidence",
         "action_cost/risk": "authored reference values (config/scoring_config.json), not measured",
     }
@@ -117,7 +137,9 @@ def score_event(
         score_components={
             "recovery_potential": recovery_potential,
             "revenue_value_score": revenue_value_score,
-            "customer_value_score": customer_value_score,
+            "customer_value_score": blended_customer_value,
+            "customer_value_raw_olist_rank": customer_value_score,
+            "ml_customer_propensity_score": ml_customer_propensity_score,
             "confidence_score": confidence_score,
         },
         action_scores=action_scores,

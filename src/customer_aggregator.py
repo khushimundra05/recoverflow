@@ -33,6 +33,7 @@ def score_all_events(events_df: pd.DataFrame, mapping: dict, scoring_config: dic
             revenue_value_is_real=False,  # no live merchant -- see simulate_payment_failures.py note
             customer_value_score=row["customer_value_score"],
             prior_attempt_count=row.get("prior_attempt_count", 0),
+            ml_customer_propensity_score=row.get("ml_customer_propensity_score", 61.4),
             scoring_config=scoring_config,
         )
         results.append({

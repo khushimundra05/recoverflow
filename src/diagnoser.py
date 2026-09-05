@@ -41,7 +41,7 @@ def load_reason_mapping() -> dict:
         return json.load(f)
 
 
-def diagnose(event: dict, reason_mapping: dict = None) -> Diagnosis:
+def diagnose(event: dict, reason_mapping: dict = None, reason_matcher=None) -> Diagnosis:
     """
     event expects at minimum:
         {
@@ -50,13 +50,39 @@ def diagnose(event: dict, reason_mapping: dict = None) -> Diagnosis:
             "reason_key": str,   # razorpay reason code, or "checkout_abandoned" /
                                   # "invoice_overdue" for the other two leak types
         }
+    Optionally: "description" (free text) -- used ONLY if reason_key isn't found
+    and a reason_matcher (see reason_matcher.py) is provided, as a fallback.
     """
     if reason_mapping is None:
         reason_mapping = load_reason_mapping()
 
     reason_key = event["reason_key"]
     if reason_key not in reason_mapping:
-        # Unknown reason code -- fail safe, don't guess.
+        # Try the text-similarity fallback before giving up, if we have a
+        # description and a matcher available.
+        description = event.get("description")
+        if description and reason_matcher is not None:
+            match_result = reason_matcher.match(description)
+            if match_result["matched"]:
+                entry = match_result["matched_entry"]
+                matched_key = match_result["matched_reason_key"]
+                # Confidence is reduced vs. an exact taxonomy hit -- this is a
+                # similarity-based guess, not a real Razorpay-reported reason.
+                return Diagnosis(
+                    event_id=event["event_id"],
+                    leak_type=event["leak_type"],
+                    reason_key=reason_key,
+                    root_cause=entry["root_cause"],
+                    source=entry["source"],
+                    confidence=round(entry["confidence"] * match_result["similarity"] * 2, 3),  # damped
+                    rationale=f"No exact taxonomy match for '{reason_key}'. Matched to '{matched_key}' "
+                              f"via TF-IDF text similarity ({match_result['similarity']}) on description: "
+                              f"\"{description}\"",
+                    candidate_actions=entry["candidate_actions"],
+                    data_provenance=f"TEXT-SIMILARITY FALLBACK MATCH (not an exact Razorpay taxonomy hit) "
+                                     f"-- matched to '{matched_key}', confidence damped accordingly.",
+                )
+        # Unknown reason code with no usable description/matcher -- fail safe, don't guess.
         return Diagnosis(
             event_id=event["event_id"],
             leak_type=event["leak_type"],
@@ -110,3 +136,16 @@ if __name__ == "__main__":
         diagnosis = diagnose(evt, mapping)
         print(json.dumps(asdict(diagnosis), indent=2))
         print("-" * 60)
+
+    print("\n" + "=" * 60)
+    print("NOW WITH TEXT-SIMILARITY FALLBACK for an unmapped code")
+    print("=" * 60)
+    from reason_matcher import ReasonMatcher
+    matcher = ReasonMatcher(mapping)
+    evt_with_description = {
+        "event_id": "evt_006", "leak_type": "payment_failure",
+        "reason_key": "unknown_gateway_code_9912",
+        "description": "The customer's card was declined due to insufficient balance in their account",
+    }
+    diagnosis = diagnose(evt_with_description, mapping, reason_matcher=matcher)
+    print(json.dumps(asdict(diagnosis), indent=2))
