@@ -2,6 +2,10 @@
 
 **A bounded revenue recovery agent for Razorpay merchants — built for the AI Revenue Recovery track.**
 
+### 🚀 Live Demo
+
+**[Open RecoverFlow Dashboard](https://recoverflow-five.vercel.app/)**
+
 Most recovery systems retry every failed payment the same way and message every abandoned cart identically. This project asks a different question:
 
 > **When recovery capacity is limited, which revenue leaks are actually worth acting on, what is the safest permitted intervention, and when should the system stop?**
@@ -85,12 +89,12 @@ The current score is:
 
 These are **initial authored policy weights**, not weights learned from historical recovery outcomes.
 
-| Component | Weight | Current meaning |
-|---|---:|---|
-| Recovery Potential | 40% | How promising the opportunity appears based on event characteristics and recovery rules |
-| Revenue Value | 25% | Relative monetary value of the transaction/opportunity |
-| Customer Value | 20% | Historical importance/reliability of the customer |
-| Diagnostic Confidence | 15% | Confidence in the diagnosis, **not** probability of recovery |
+| Component             | Weight | Current meaning                                                                         |
+| --------------------- | -----: | --------------------------------------------------------------------------------------- |
+| Recovery Potential    |    40% | How promising the opportunity appears based on event characteristics and recovery rules |
+| Revenue Value         |    25% | Relative monetary value of the transaction/opportunity                                  |
+| Customer Value        |    20% | Historical importance/reliability of the customer                                       |
+| Diagnostic Confidence |    15% | Confidence in the diagnosis, **not** probability of recovery                            |
 
 The component values are normalized prioritization signals. They should **not** be interpreted as calibrated probabilities.
 
@@ -125,10 +129,10 @@ The ₹500,000 budget and the specific policy thresholds are **illustrative valu
 
 Same approximately **₹500,000 budget**, same **2,400-event batch**, independently evaluated:
 
-| Strategy | Events actioned | Recovery rate | Simulated recovery |
-|---|---:|---:|---:|
-| Naive (arbitrary order) | 196 | 13.3% | ₹49,669 |
-| **Recovery Operator** | **21** | **47.6%** | **₹165,850** |
+| Strategy                | Events actioned | Recovery rate | Simulated recovery |
+| ----------------------- | --------------: | ------------: | -----------------: |
+| Naive (arbitrary order) |             196 |         13.3% |            ₹49,669 |
+| **Recovery Operator**   |          **21** |     **47.6%** |       **₹165,850** |
 
 **→ ₹116,181 more simulated recovery on essentially the identical budget.**
 
@@ -154,17 +158,17 @@ The ML model's output is used as a **customer-behavior propensity signal**, not 
 
 The distinction between real data, authored assumptions, and simulation is deliberate.
 
-| Component | Real | Simulated / authored |
-|---|---|---|
-| Payment failure taxonomy | Razorpay's published error structure (`reason`, `source`, `step`, etc.) | — |
-| Customer purchase history | Olist — 99,441 real orders / 96,096 real customers | — |
-| ML training labels | Olist `order_status` outcomes | — |
-| Specific leak events | — | Simulated and explicitly flagged |
-| Event amounts | — | Simulated |
-| Scoring weights | — | Authored policy weights |
-| Policy limits / budget | — | Illustrative merchant-policy values |
-| Action effectiveness / recovery outcomes | — | Independent outcome simulation |
-| Razorpay execution | Real Razorpay Test Mode API calls | — |
+| Component                                | Real                                                                    | Simulated / authored                |
+| ---------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------- |
+| Payment failure taxonomy                 | Razorpay's published error structure (`reason`, `source`, `step`, etc.) | —                                   |
+| Customer purchase history                | Olist — 99,441 real orders / 96,096 real customers                      | —                                   |
+| ML training labels                       | Olist `order_status` outcomes                                           | —                                   |
+| Specific leak events                     | —                                                                       | Simulated and explicitly flagged    |
+| Event amounts                            | —                                                                       | Simulated                           |
+| Scoring weights                          | —                                                                       | Authored policy weights             |
+| Policy limits / budget                   | —                                                                       | Illustrative merchant-policy values |
+| Action effectiveness / recovery outcomes | —                                                                       | Independent outcome simulation      |
+| Razorpay execution                       | Real Razorpay Test Mode API calls                                       | —                                   |
 
 Olist is used as the **customer-history layer**. It is not treated as a proxy for Razorpay payment behavior or recovery behavior.
 
@@ -176,21 +180,21 @@ The specific abandonment, payment-failure, and overdue-invoice events are genera
 
 The current system makes its assumptions explicit rather than presenting them as learned facts.
 
-| Current component / parameter | Current source | What production would need |
-|---|---|---|
-| 40/25/20/15 Opportunity Score weights | Authored policy weights | Historical decisions + outcomes to optimize/calibrate prioritization |
-| Recovery Potential | Rule-based event characteristics | Historical leak context + eventual recovery outcomes |
-| Diagnostic Confidence | Authored diagnostic rules | Confirmed historical diagnoses → calibrated diagnostic model |
-| Revenue Value | Normalized transaction amount | Actual merchant transaction economics |
-| Customer Value | Historical behavior + ML propensity | Longitudinal transaction history / CLV data |
-| Expected Recovery | Simulated/configured | Customer × intervention × outcome history |
-| Action Cost | Simulated/configured | Actual communication, discount, processing and human-review costs |
-| Risk | Simulated/configured | Merchant-specific risk outcomes, complaints, chargebacks, etc. |
-| Customer cooldown / message limits | Illustrative merchant policy | Merchant communication policy + observed customer behavior |
-| Maximum recovery attempts | Illustrative merchant policy | Merchant economics, risk tolerance and historical recovery curves |
-| Discount cap | Illustrative merchant policy | Merchant margin and discount policy |
-| Human escalation threshold | Illustrative merchant policy | Merchant risk/operations policy and transaction economics |
-| ₹500,000 daily budget | Evaluation assumption | Merchant-defined recovery budget / economic constraints |
+| Current component / parameter         | Current source                      | What production would need                                           |
+| ------------------------------------- | ----------------------------------- | -------------------------------------------------------------------- |
+| 40/25/20/15 Opportunity Score weights | Authored policy weights             | Historical decisions + outcomes to optimize/calibrate prioritization |
+| Recovery Potential                    | Rule-based event characteristics    | Historical leak context + eventual recovery outcomes                 |
+| Diagnostic Confidence                 | Authored diagnostic rules           | Confirmed historical diagnoses → calibrated diagnostic model         |
+| Revenue Value                         | Normalized transaction amount       | Actual merchant transaction economics                                |
+| Customer Value                        | Historical behavior + ML propensity | Longitudinal transaction history / CLV data                          |
+| Expected Recovery                     | Simulated/configured                | Customer × intervention × outcome history                            |
+| Action Cost                           | Simulated/configured                | Actual communication, discount, processing and human-review costs    |
+| Risk                                  | Simulated/configured                | Merchant-specific risk outcomes, complaints, chargebacks, etc.       |
+| Customer cooldown / message limits    | Illustrative merchant policy        | Merchant communication policy + observed customer behavior           |
+| Maximum recovery attempts             | Illustrative merchant policy        | Merchant economics, risk tolerance and historical recovery curves    |
+| Discount cap                          | Illustrative merchant policy        | Merchant margin and discount policy                                  |
+| Human escalation threshold            | Illustrative merchant policy        | Merchant risk/operations policy and transaction economics            |
+| ₹500,000 daily budget                 | Evaluation assumption               | Merchant-defined recovery budget / economic constraints              |
 
 ### What data would enable better models?
 
@@ -278,16 +282,16 @@ A timeout does not establish whether the external operation succeeded.
 
 ## Honest limitations & production roadmap
 
-| Limitation | Why it exists here | Production direction |
-|---|---|---|
-| No real event → action → outcome history | No live merchant intervention dataset | Log every decision and outcome; learn/calibrate parameters after sufficient volume |
-| Diagnostic confidence is authored | No confirmed historical diagnosis labels | Train and calibrate a diagnostic model |
-| ML propensity signal is weak (PR-AUC ~0.0085) | Olist `order_status` reflects logistics/seller outcomes, not payment-recovery behavior | Train on a merchant's own payment/recovery history |
-| Recovery outcomes are simulated | No independent live recovery ground truth | Replace with webhook-confirmed real outcomes |
-| Policy values are illustrative | No real merchant configured them | Use per-merchant configurable policies |
-| No causal uplift measurement | Offline simulation cannot establish counterfactual causal effects | Use randomized experimentation / causal evaluation where appropriate |
-| RBI e-mandate rules are out of scope | Current scope covers payment failures, abandonment and overdue invoices rather than subscription/mandate flows | Add a dedicated subscription-recovery module with the required compliance logic |
-| Real Razorpay demo capped at 5 actions | Avoid rate limits; Test Mode does not prove ROI | Production rollout would require webhooks, monitoring, and appropriate native Razorpay idempotency mechanisms where supported |
+| Limitation                                    | Why it exists here                                                                                             | Production direction                                                                                                          |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| No real event → action → outcome history      | No live merchant intervention dataset                                                                          | Log every decision and outcome; learn/calibrate parameters after sufficient volume                                            |
+| Diagnostic confidence is authored             | No confirmed historical diagnosis labels                                                                       | Train and calibrate a diagnostic model                                                                                        |
+| ML propensity signal is weak (PR-AUC ~0.0085) | Olist `order_status` reflects logistics/seller outcomes, not payment-recovery behavior                         | Train on a merchant's own payment/recovery history                                                                            |
+| Recovery outcomes are simulated               | No independent live recovery ground truth                                                                      | Replace with webhook-confirmed real outcomes                                                                                  |
+| Policy values are illustrative                | No real merchant configured them                                                                               | Use per-merchant configurable policies                                                                                        |
+| No causal uplift measurement                  | Offline simulation cannot establish counterfactual causal effects                                              | Use randomized experimentation / causal evaluation where appropriate                                                          |
+| RBI e-mandate rules are out of scope          | Current scope covers payment failures, abandonment and overdue invoices rather than subscription/mandate flows | Add a dedicated subscription-recovery module with the required compliance logic                                               |
+| Real Razorpay demo capped at 5 actions        | Avoid rate limits; Test Mode does not prove ROI                                                                | Production rollout would require webhooks, monitoring, and appropriate native Razorpay idempotency mechanisms where supported |
 
 ---
 
